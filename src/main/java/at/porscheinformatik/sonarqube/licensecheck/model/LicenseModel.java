@@ -60,7 +60,7 @@ public class LicenseModel {
     }
 
     public String generateSpdxLicenseInfo() {
-        final List<String> allLicenses = this.licenses.stream().map(LicenseDefinition::getIdentifier).collect(Collectors.toList());
+        final List<String> allLicenses = this.licenses.stream().map(LicenseDefinition::getName).collect(Collectors.toList());
         allLicenses.addAll(this.unmatched.stream().map(it -> "u:" + it).collect(Collectors.toList()));
         if (allLicenses.size() == 1 && models.isEmpty()) {
             return allLicenses.get(0);

@@ -64,7 +64,7 @@ public class Dependency implements Comparable<Dependency> {
         if (!licenses.isEmpty()) {
             license = String.join(",", licenses);
         }
-        this.licenses.addAll(licenses);
+        this.licenses = new HashSet<>(licenses);
     }
 
     public String getLicense() {
@@ -72,6 +72,7 @@ public class Dependency implements Comparable<Dependency> {
     }
 
     public void setLicense(String license) {
+        this.licenses = new HashSet<>();
         this.license = license;
     }
 

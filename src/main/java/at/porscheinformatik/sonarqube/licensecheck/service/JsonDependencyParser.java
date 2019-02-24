@@ -1,5 +1,6 @@
 package at.porscheinformatik.sonarqube.licensecheck.service;
 
+import at.porscheinformatik.sonarqube.licensecheck.configuration.JsonParserConfiguration;
 import at.porscheinformatik.sonarqube.licensecheck.interfaces.Scanner;
 import at.porscheinformatik.sonarqube.licensecheck.model.Dependency;
 import com.jayway.jsonpath.DocumentContext;
@@ -15,6 +16,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -24,36 +26,47 @@ import java.util.stream.Stream;
 public class JsonDependencyParser implements Scanner {
 
     public static final Pattern VERSION_MATCHING_PATTERN = Pattern.compile(".*:(\\d+(\\.\\d+)+.*)");
-    private final Configuration configuration;
+    private final JsonParserConfiguration configuration;
 
     private static final Logger LOGGER = LoggerFactory.getLogger(JsonDependencyParser.class);
 
     public JsonDependencyParser(Configuration configuration) {
-        this.configuration = configuration;
+        this.configuration = JsonParserConfiguration.parseConfiguration(configuration);
     }
 
     @Override
     public List<Dependency> scan(File moduleDir) {
-        String filename = configuration.get("licensecheck.parse.json.input_file").orElse("licenseReport.json");
-        String dependencyJsonPath = configuration.get("licensecheck.parse.json.dependency_path").orElse("$.[*]");
-        String artifactJsonPath = configuration.get("licensecheck.parse.json.artifact_path").orElse("$.dependency");
-        String licenseJsonPath = configuration.get("licensecheck.parse.json.license_path").orElse("$.licenses.[*].license");
-        String versionJsonPath = configuration.get("licensecheck.parse.json.version_path").orElse("$.version");
         try (final Stream<Path> walk = Files.walk(moduleDir.toPath())) {
-            final Optional<File> filePath = walk.filter(it -> it.endsWith(filename)).findAny().map(Path::toFile);
-            if (filePath.isPresent()) {
-                final DocumentContext licensesDocument = JsonPath.parse(filePath.get());
-                Integer count = ((JSONArray) licensesDocument.read(dependencyJsonPath)).size();
-
-                LOGGER.info("Reading {} records", count);
-                final String[] dependencyPathParts = dependencyJsonPath.split("\\*");
-                return IntStream.range(0, count).boxed().map(index -> dependencyPathParts[0] + index.toString() + dependencyPathParts[1])
-                    .map(dependencyPath -> extractDependency(artifactJsonPath, licenseJsonPath, versionJsonPath, licensesDocument, dependencyPath)).filter(Objects::nonNull).collect(Collectors.toList());
-            }
+            final List<Dependency> foundDependencies = new ArrayList<>();
+            walk.filter(it -> it.toString().matches(configuration.getFileRegex())).map(Path::toFile)
+                .forEach(processDependencies(foundDependencies));
+            return foundDependencies;
         } catch (IOException e) {
-            LOGGER.error("Could not read dependencies from {}", filename);
+            LOGGER.error("Could not read dependencies from {}", configuration.getFileRegex());
         }
         return Collections.emptyList();
+    }
+
+    private Consumer<File> processDependencies(List<Dependency> foundDependencies) {
+        return (file) -> {
+            if (file.canRead()) {
+                final DocumentContext licensesDocument;
+                try {
+                    licensesDocument = JsonPath.parse(file);
+                    int count = ((JSONArray) licensesDocument.read(configuration.getDependencyJsonPath())).size();
+
+                    LOGGER.info("Reading {} records", count);
+                    final String[] dependencyPathParts = configuration.getDependencyJsonPath().split("\\*");
+                    IntStream.range(0, count).boxed()
+                        .map(index -> dependencyPathParts[0] + index.toString() + dependencyPathParts[1])
+                        .map(dependencyPath -> extractDependency(configuration.getArtifactJsonPath(), configuration.getLicenseJsonPath(), configuration.getVersionJsonPath(), licensesDocument, dependencyPath))
+                        .filter(Objects::nonNull).forEach(foundDependencies::add);
+                } catch (IOException e) {
+                    LOGGER.error("Could not read dependencies from {}", file);
+                    LOGGER.debug("Error whilist reading dependencies: ", e);
+                }
+            }
+        };
     }
 
     private Dependency extractDependency(String artifactJsonPath, String licenseJsonPath, String versionJsonPath, DocumentContext licensesDocument, String dependencyPath) {
@@ -94,4 +107,5 @@ public class JsonDependencyParser implements Scanner {
         LOGGER.info("Could not retrieve licenses from JSONPath {}", path);
         return Collections.emptySet();
     }
+
 }

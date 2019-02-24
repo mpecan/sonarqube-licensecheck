@@ -23,6 +23,7 @@ public class SonarqubeConfigurationHelper {
 
     public static void mockConfiguration(Configuration mock) {
         when(mock.get(any())).thenReturn(Optional.empty());
+        when(mock.getBoolean(any())).thenReturn(Optional.empty());
     }
 
     public static Map<String, String> map(String... strings) {

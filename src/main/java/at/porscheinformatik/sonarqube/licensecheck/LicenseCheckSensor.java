@@ -33,6 +33,7 @@ public class LicenseCheckSensor implements ProjectSensor {
         this.validateLicenses = validateLicenses;
         this.licenseMatcherService = licenseMatcherService;
         this.scanners = ScannerResolver.resolveScanners(fs.baseDir(), configuration);
+        LOGGER.info("Resolved scanners: {}", scanners);
     }
 
     private static void saveDependencies(SensorContext sensorContext, Set<Dependency> dependencies) {
@@ -67,7 +68,7 @@ public class LicenseCheckSensor implements ProjectSensor {
     public void execute(SensorContext context) {
         if (configuration.getBoolean(LicenseCheckPropertyKeys.ACTIVATION_KEY).orElse(false)) {
             Set<Dependency> dependencies = new TreeSet<>();
-
+            LOGGER.info("Provided scanners: {}", scanners);
             for (Scanner scanner : scanners) {
                 final List<Dependency> scan = scanner.scan(fs.baseDir());
                 if (scan != null) {

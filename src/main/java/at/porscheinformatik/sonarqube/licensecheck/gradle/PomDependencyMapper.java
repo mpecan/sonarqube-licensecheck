@@ -1,7 +1,6 @@
 package at.porscheinformatik.sonarqube.licensecheck.gradle;
 
-import at.porscheinformatik.sonarqube.licensecheck.Dependency;
-import at.porscheinformatik.sonarqube.licensecheck.gradle.license.LicenseMatcher;
+import at.porscheinformatik.sonarqube.licensecheck.model.Dependency;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.maven.model.License;
 import org.apache.maven.model.Model;
@@ -12,11 +11,6 @@ import java.util.stream.Collectors;
 
 class PomDependencyMapper {
 
-    private final LicenseMatcher licenseMatcher;
-
-    PomDependencyMapper(LicenseMatcher licenseMatcher) {
-        this.licenseMatcher = licenseMatcher;
-    }
 
     Dependency toDependency(Model model) {
         inheritGroupOrVersionFromParent(model);
@@ -30,32 +24,18 @@ class PomDependencyMapper {
         return new Dependency(
             model.getGroupId() + ":" + model.getArtifactId(),
             model.getVersion(),
-            selectMatchingLicenseFromLicenses(model));
+            selectLicenses(model));
 
 
     }
 
-    private String selectMatchingLicenseFromLicenses(Model model) {
+    private List<String> selectLicenses(Model model) {
         List<License> licenses = model.getLicenses().stream()
             .filter(licenseNameIsNotBlank())
             .collect(Collectors.toList());
 
-        String license = null;
-        if (licenseMatcher != null) {
-            license = licenses.stream()
-                .map(License::getName)
-                .map(licenseMatcher::viaLicenseMap)
-                .findFirst()
-                .orElse("");
-        }
 
-        if (StringUtils.isBlank(license)) {
-            license = licenses.stream()
-                .map(License::getName)
-                .findFirst()
-                .orElse("");
-        }
-        return license;
+        return licenses.stream().map(License::getName).collect(Collectors.toList());
     }
 
     private void inheritGroupOrVersionFromParent(Model pom) {

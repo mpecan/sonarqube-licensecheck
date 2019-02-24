@@ -4,6 +4,7 @@ public class LicenseCheckPropertyKeys {
 
     private LicenseCheckPropertyKeys() {}
 
+
     public static final String NAME_MATCHES = "nameMatches";
     public static final String LICENSE = "license";
     public static final String NAME = "name";
@@ -21,6 +22,14 @@ public class LicenseCheckPropertyKeys {
     public static final String INTERNAL_REGEX = "licensecheck.internalregex";
 
     public static final String ACTIVATION_KEY = "licensecheck.activation";
-
     public static final String FORBID_UNKNOWN = "licensecheck.forbid_unknown";
+
+    public static final String GRADLE_DISABLED = "licensecheck.gradle.disabled";
+
+    public static final String JSON_PARSER_FILE_REGEX = "licensecheck.parse.json.input_file_regex";
+    public static final String JSON_PARSER_INPUT_FILE = "licensecheck.parse.json.input_file";
+    public static final String JSON_PARSER_DEPENDENCY_PATH = "licensecheck.parse.json.dependency_path";
+    public static final String JSON_PARSER_ARTIFACT_PATH = "licensecheck.parse.json.artifact_path";
+    public static final String JSON_PARSER_LICENSE_PATH = "licensecheck.parse.json.license_path";
+    public static final String JSON_PARSER_VERSION_PATH = "licensecheck.parse.json.version_path";
 }
