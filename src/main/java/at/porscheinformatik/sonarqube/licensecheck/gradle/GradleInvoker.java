@@ -46,14 +46,25 @@ class GradleInvoker {
 
         ProcessBuilder processBuilder = new ProcessBuilder();
         Process process = processBuilder.command(command).directory(projectRoot).start();
-
+        Thread timeoutThread = new Thread(() -> {
+            try {
+                Thread.sleep(3 * 60 * 1000L);
+                process.destroyForcibly();
+                LOGGER.error("Had to interrupt gradle process, as it was stuck.");
+            } catch (InterruptedException e) {
+                LOGGER.info("Gradle Timeout thread has been interrupted, gradle execution successful");
+            }
+        });
+        timeoutThread.start();
         InputStream errorStream = process.getErrorStream();
         InputStream inputStream = process.getInputStream();
         String stderr = getOutput(errorStream);
         String stdout = getOutput(inputStream);
 
         while (process.isAlive()) {
+            // Waiting for gradle to finish
         }
+        timeoutThread.interrupt();
         if (process.exitValue() != 0) {
             if (LOGGER.isErrorEnabled()) {
                 LOGGER.error("Failed execution of gradle command {}", Arrays.toString(command));

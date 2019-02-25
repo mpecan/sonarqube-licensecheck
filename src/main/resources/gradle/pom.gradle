@@ -9,7 +9,9 @@ gradle.projectsLoaded {
       }
     }
     afterEvaluate { project ->
-      project.apply plugin: 'com.jaredsburrows.license'
+      if (!project.plugins.hasPlugin('com.jaredsburrows.license')) {
+        project.apply plugin: 'com.jaredsburrows.license'
+      }
     }
   }
 }

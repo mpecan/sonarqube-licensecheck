@@ -17,7 +17,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
-import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertThat;
 
@@ -49,14 +48,6 @@ public class GradleDisableTest {
 
         List<Dependency> dependencies = gradleDependencyScanner.scan(projectRoot);
 
-        assertThat(dependencies, hasSize(13));
-        assertThat(dependencies, hasItem(
-            new Dependency("org.spockframework:spock-core",
-                "1.1-groovy-2.4",
-                "The Apache Software License, Version 2.0")));
-        assertThat(dependencies, hasItem(
-            new Dependency("org.tukaani:xz",
-                "1.5",
-                "Public Domain")));
+        assertThat(dependencies, hasSize(0));
     }
 }
