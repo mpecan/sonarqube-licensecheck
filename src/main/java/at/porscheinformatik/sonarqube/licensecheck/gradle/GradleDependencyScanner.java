@@ -3,7 +3,6 @@ package at.porscheinformatik.sonarqube.licensecheck.gradle;
 import at.porscheinformatik.sonarqube.licensecheck.LicenseCheckPropertyKeys;
 import at.porscheinformatik.sonarqube.licensecheck.interfaces.Scanner;
 import at.porscheinformatik.sonarqube.licensecheck.model.Dependency;
-import org.apache.maven.model.Model;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sonar.api.config.Configuration;
@@ -11,19 +10,15 @@ import org.sonar.api.config.Configuration;
 import java.io.File;
 import java.util.Collections;
 import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
 public class GradleDependencyScanner implements Scanner {
     private static final Logger LOGGER = LoggerFactory.getLogger(GradleDependencyScanner.class);
-    private final PomDependencyMapper pomDependencyMapper;
     private final boolean disabled;
 
     private File projectRoot;
 
     public GradleDependencyScanner(Configuration configuration) {
         this.disabled = configuration.getBoolean(LicenseCheckPropertyKeys.GRADLE_DISABLED).orElse(false);
-        this.pomDependencyMapper = new PomDependencyMapper();
     }
 
     @Override
@@ -44,18 +39,9 @@ public class GradleDependencyScanner implements Scanner {
 
     private List<Dependency> resolveDependenciesWithLicenses() throws Exception {
         GradlePomResolver gradlePomResolver = new GradlePomResolver(projectRoot);
-        List<Model> poms = gradlePomResolver.resolvePomsOfAllDependencies();
-        List<Dependency> dependencies = pomsToDependencies(poms);
 
-        return dependencies.stream()
-            .collect(Collectors.toList());
+        return gradlePomResolver.resolveDependencies();
     }
 
-    private List<Dependency> pomsToDependencies(List<Model> poms) {
-        return poms.stream()
-            .map(pomDependencyMapper::toDependency)
-            .filter(Objects::nonNull)
-            .collect(Collectors.toList());
-    }
 
 }

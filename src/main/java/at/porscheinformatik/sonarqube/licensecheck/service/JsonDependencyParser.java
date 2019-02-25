@@ -34,6 +34,11 @@ public class JsonDependencyParser implements Scanner {
         this.configuration = JsonParserConfiguration.parseConfiguration(configuration);
     }
 
+    public JsonDependencyParser(JsonParserConfiguration jsonParserConfiguration) {
+        this.configuration = jsonParserConfiguration;
+    }
+
+
     @Override
     public List<Dependency> scan(File moduleDir) {
         try (final Stream<Path> walk = Files.walk(moduleDir.toPath())) {

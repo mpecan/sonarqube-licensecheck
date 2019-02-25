@@ -35,6 +35,16 @@ public class JsonParserConfiguration {
     }
 
 
+    public static JsonParserConfiguration burrowsLicenseCheckConfiguration() {
+        JsonParserConfiguration config = new JsonParserConfiguration();
+        config.fileRegex = ".*licenseReport.json";
+        config.dependencyJsonPath = "$.[*]";
+        config.artifactJsonPath = "$.dependency";
+        config.licenseJsonPath = "$.licenses.[*].license";
+        config.versionJsonPath = "$.version";
+        return config;
+    }
+
     public static JsonParserConfiguration parseConfiguration(Configuration configuration) {
         JsonParserConfiguration config = new JsonParserConfiguration();
         config.fileRegex = configuration.get(LicenseCheckPropertyKeys.JSON_PARSER_FILE_REGEX).orElse(".*" + configuration.get(LicenseCheckPropertyKeys.JSON_PARSER_INPUT_FILE).orElse("licenseReport.json"));

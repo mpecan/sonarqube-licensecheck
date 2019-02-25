@@ -15,30 +15,28 @@ class GradleInvoker {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GradleInvoker.class);
 
-    private final static String BUILD_GRADLE = "build.gradle";
-    private static String GRADLE_EXEC;
+    private static final String BUILD_GRADLE = "build.gradle";
+    private String gradleExec;
 
     private final File projectRoot;
 
     private String userSettings;
 
     // todo: use gradle tooling api if possible
-    GradleInvoker(String projectRoot) throws Exception {
+    GradleInvoker(String projectRoot) {
         this.projectRoot = new File(projectRoot);
         File buildGradle = new File(projectRoot, BUILD_GRADLE);
 
         if (!buildGradle.exists()) {
-            throw new Exception("no build.gradle found");
+            throw new RuntimeException("no build.gradle found");
         }
 
-        GRADLE_EXEC = resolveGradleExecutable(this.projectRoot);
+        gradleExec = resolveGradleExecutable(this.projectRoot);
 
         userSettings = null;
         CommandLine cmd = getCommandLineArgs();
-        if (cmd != null) {
-            if (cmd.hasOption("I")) {
-                userSettings = cmd.getOptionValue("I");
-            }
+        if (cmd != null && cmd.hasOption("I")) {
+            userSettings = cmd.getOptionValue("I");
         }
     }
 
@@ -57,7 +55,9 @@ class GradleInvoker {
         while (process.isAlive()) {
         }
         if (process.exitValue() != 0) {
-            LOGGER.error("Failed execution of gradle command {}", Arrays.toString(command));
+            if (LOGGER.isErrorEnabled()) {
+                LOGGER.error("Failed execution of gradle command {}", Arrays.toString(command));
+            }
             LOGGER.error("Gradle stderr: {}", stderr);
             throw new GradleInvokerException("Failed execution of gradle command ");
         }
@@ -69,15 +69,19 @@ class GradleInvoker {
         File gradlew = new File(projectRoot, "gradlew");
 
         if (gradlew.exists()) {
-            LOGGER.info("Using {} wrapper with version {}",
-                gradlew.getAbsolutePath(),
-                resolveGradleVersion(gradlew.getAbsolutePath()));
+            if (LOGGER.isInfoEnabled()) {
+                LOGGER.info("Using {} wrapper with version {}",
+                    gradlew.getAbsolutePath(),
+                    resolveGradleVersion(gradlew.getAbsolutePath()));
+            }
             return gradlew.getAbsolutePath();
         } else {
             String gradle = "gradle";
-            LOGGER.info("Using {} with version {}",
-                gradle,
-                resolveGradleVersion(gradle));
+            if (LOGGER.isInfoEnabled()) {
+                LOGGER.info("Using {} with version {}",
+                    gradle,
+                    resolveGradleVersion(gradle));
+            }
             return gradle;
         }
     }
@@ -89,7 +93,7 @@ class GradleInvoker {
             process = processBuilder.start();
             return getOutput(process.getInputStream());
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error("Error resolving gradle version: ", e);
             return null;
         }
     }
@@ -97,11 +101,11 @@ class GradleInvoker {
     private String[] resolveFullGradleCommand(String[] gradleCommands) {
         String[] baseCommands;
         if (userSettings == null) {
-            baseCommands = new String[]{GRADLE_EXEC, "-i"};
+            baseCommands = new String[]{gradleExec, "-i"};
         } else {
             String[] split = userSettings.split(" ");
             baseCommands = new String[split.length + 2];
-            baseCommands[0] = GRADLE_EXEC;
+            baseCommands[0] = gradleExec;
             baseCommands[1] = "-i";
             baseCommands[2] = split[0];
             baseCommands[3] = split[1];
@@ -124,7 +128,7 @@ class GradleInvoker {
         return builder.toString();
     }
 
-    private class GradleInvokerException extends Exception {
+    public static class GradleInvokerException extends Exception {
         GradleInvokerException(String message) {
             super(message);
         }

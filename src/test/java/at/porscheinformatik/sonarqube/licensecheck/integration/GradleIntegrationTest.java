@@ -5,18 +5,22 @@ import at.porscheinformatik.sonarqube.licensecheck.gradle.GradleProjectResolver;
 import at.porscheinformatik.sonarqube.licensecheck.model.Dependency;
 import org.junit.Before;
 import org.junit.Test;
-import org.mockito.Matchers;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 import org.mockito.Mockito;
 import org.sonar.api.config.Configuration;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 
+import static at.porscheinformatik.sonarqube.licensecheck.sonarqube.SonarqubeConfigurationHelper.mockConfiguration;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.junit.Assert.assertThat;
 
+@RunWith(Parameterized.class)
 public class GradleIntegrationTest {
 
     private static File projectRoot;
@@ -26,15 +30,30 @@ public class GradleIntegrationTest {
         projectRoot = GradleProjectResolver.prepareGradleProject();
     }
 
+
+    @Parameterized.Parameters
+    public static List<String> data() {
+        return Arrays.asList("5.1.1", "4.10.3", "3.5.1");
+    }
+
+    @Parameterized.Parameter
+    public String version;
+
     @Test
     public void scanWithMatch() throws IOException {
-        GradleProjectResolver.loadGradleWrapper(projectRoot);
+        GradleProjectResolver.loadGradleWrapper(projectRoot, version);
         Configuration configuration = Mockito.mock(Configuration.class);
-        Mockito.when(configuration.getBoolean(Matchers.anyString())).thenReturn(Optional.of(true));
+        mockConfiguration(configuration);
         GradleDependencyScanner gradleDependencyScanner = new GradleDependencyScanner(configuration);
 
         List<Dependency> dependencies = gradleDependencyScanner.scan(projectRoot);
 
-        assertThat(dependencies, hasSize(0));
+        assertThat(dependencies, hasSize(9));
+        assertThat(dependencies, hasItem(
+            new Dependency("org.codehaus.groovy:groovy-all", "2.3.1", "The Apache Software License, Version 2.0")));
+        assertThat(dependencies, hasItem(
+            new Dependency("org.tukaani:xz",
+                "1.5",
+                (String) null)));
     }
 }
