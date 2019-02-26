@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.util.Arrays;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 class GradleInvoker {
@@ -58,8 +59,8 @@ class GradleInvoker {
         timeoutThread.start();
         InputStream errorStream = process.getErrorStream();
         InputStream inputStream = process.getInputStream();
-        String stderr = getOutput(errorStream);
-        String stdout = getOutput(inputStream);
+        redirectOutput(errorStream, LOGGER::error);
+        redirectOutput(inputStream, LOGGER::debug);
 
         while (process.isAlive()) {
             // Waiting for gradle to finish
@@ -69,11 +70,10 @@ class GradleInvoker {
             if (LOGGER.isErrorEnabled()) {
                 LOGGER.error("Failed execution of gradle command {}", Arrays.toString(command));
             }
-            LOGGER.error("Gradle stderr: {}", stderr);
             throw new GradleInvokerException("Failed execution of gradle command ");
         }
 
-        return stdout;
+        return "";
     }
 
     private String resolveGradleExecutable(File projectRoot) {
@@ -81,31 +81,25 @@ class GradleInvoker {
 
         if (gradlew.exists()) {
             if (LOGGER.isInfoEnabled()) {
-                LOGGER.info("Using {} wrapper with version {}",
-                    gradlew.getAbsolutePath(),
-                    resolveGradleVersion(gradlew.getAbsolutePath()));
+
+                resolveGradleVersion(gradlew.getAbsolutePath());
             }
             return gradlew.getAbsolutePath();
         } else {
             String gradle = "gradle";
-            if (LOGGER.isInfoEnabled()) {
-                LOGGER.info("Using {} with version {}",
-                    gradle,
-                    resolveGradleVersion(gradle));
-            }
+            resolveGradleVersion(gradle);
             return gradle;
         }
     }
 
-    private String resolveGradleVersion(String exec) {
+    private void resolveGradleVersion(String exec) {
         ProcessBuilder processBuilder = new ProcessBuilder(exec, "--version");
         Process process = null;
         try {
             process = processBuilder.start();
-            return getOutput(process.getInputStream());
+            redirectOutput(process.getInputStream(), LOGGER::info);
         } catch (IOException e) {
             LOGGER.error("Error resolving gradle version: ", e);
-            return null;
         }
     }
 
@@ -127,16 +121,23 @@ class GradleInvoker {
             .toArray(String[]::new);
     }
 
-    private String getOutput(InputStream stream) throws IOException {
+    private void redirectOutput(InputStream stream, Consumer<String> stringConsumer) {
         BufferedReader reader = new BufferedReader(new InputStreamReader(stream));
-        StringBuilder builder = new StringBuilder();
-        String line;
-        while ((line = reader.readLine()) != null) {
-            builder.append(line);
-            builder.append(System.getProperty("line.separator"));
-        }
 
-        return builder.toString();
+        Thread thread = new Thread(() -> {
+            String line;
+            while (true) {
+                try {
+                    if ((line = reader.readLine()) == null) break;
+                    stringConsumer.accept(line);
+                } catch (IOException e) {
+                    LOGGER.error("Error redirecting stream.", e);
+                }
+            }
+        });
+        thread.start();
+
+
     }
 
     public static class GradleInvokerException extends Exception {

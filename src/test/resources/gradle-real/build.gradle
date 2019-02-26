@@ -97,15 +97,23 @@ dependencies {
 import org.yaml.snakeyaml.Yaml
 
 ext {
-  snippetsDir = file('build/generated-snippets')
 
-  //make available git commitId
-  git = org.ajoberstar.grgit.Grgit.open(file('.'))
-  commitId = git.head().abbreviatedId //http://mrhaki.blogspot.de/2015/04/gradle-goodness-use-git-commit-id-in.html
-  //make available service name
-  File appFile = file('src/main/resources/bootstrap.yml')
-  yml = new Yaml().loadAll(new FileInputStream(appFile))
-  artifactId = yml.iterator().next().get('spring').get('application').get('name')
+  try {
+    snippetsDir = file('build/generated-snippets')
+
+    //make available git commitId
+    git = org.ajoberstar.grgit.Grgit.open(file('.'))
+    commitId = git.head().abbreviatedId //http://mrhaki.blogspot.de/2015/04/gradle-goodness-use-git-commit-id-in.html
+
+    //make available service name
+    File appFile = file('src/main/resources/bootstrap.yml')
+    yml = new Yaml().loadAll(new FileInputStream(appFile))
+    artifactId = yml.iterator().next().get('spring').get('application').get('name')
+  } catch (Exception e) {
+    logger.error("Could not run specific tasks for ext")
+    artifactId = "unknown"
+    commitId = "unknown"
+  }
 }
 
 test {
@@ -153,10 +161,6 @@ springBoot {
 
 jacoco {
   toolVersion = "0.7.6+"
-}
-
-wrapper {
-  gradleVersion = '3.4'
 }
 
 // from: https://github.com/fowlie/gradle-jenkins-test/blob/master/plugin/src/main/groovy/com/github/fowlie/GradleJenkinsTestPlugin.groovy

@@ -29,6 +29,7 @@ public class GradleProjectResolver {
         if (process.exitValue() != 0) {
             String stdout = IOUtils.toString(process.getInputStream(), "UTF-8");
             LOGGER.error(stdout);
+            LOGGER.error("Could not download gradle wrapper with command {}", (Object) command);
             throw new RuntimeException("Failed downloading gradle wrapper");
         }
     }
