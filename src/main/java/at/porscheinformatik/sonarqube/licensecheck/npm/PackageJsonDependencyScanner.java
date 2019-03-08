@@ -9,7 +9,10 @@ import javax.json.*;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -25,37 +28,33 @@ public class PackageJsonDependencyScanner implements Scanner {
 
     @Override
     public List<Dependency> scan(File file) {
-        File base = file;
-        base = getNodeModulesFolder(file, base);
-        File packageJsonFile = new File(base, "package.json");
+        return getNodeModulesFolders(file).map(base -> {
+            File packageJsonFile = new File(base, "package.json");
 
-        if (packageJsonFile.exists()) {
-            try (InputStream fis = new FileInputStream(packageJsonFile);
-                 JsonReader jsonReader = Json.createReader(fis)) {
-                JsonObject jsonObject = jsonReader.readObject();
-                JsonObject jsonObjectDependencies = jsonObject.getJsonObject("dependencies");
-                if (jsonObjectDependencies != null) {
-                    File nodeModulesFolder = new File(packageJsonFile.getParentFile(), "node_modules");
-                    return dependencyParser(jsonObjectDependencies, new ArrayList<>(), nodeModulesFolder);
+            if (packageJsonFile.exists()) {
+                try (InputStream fis = new FileInputStream(packageJsonFile);
+                     JsonReader jsonReader = Json.createReader(fis)) {
+                    JsonObject jsonObject = jsonReader.readObject();
+                    JsonObject jsonObjectDependencies = jsonObject.getJsonObject("dependencies");
+                    if (jsonObjectDependencies != null) {
+                        File nodeModulesFolder = new File(packageJsonFile.getParentFile(), "node_modules");
+                        return dependencyParser(jsonObjectDependencies, new ArrayList<>(), nodeModulesFolder);
+                    }
+                } catch (IOException e) {
+                    LOGGER.error("Error reading package.json", e);
                 }
-            } catch (IOException e) {
-                LOGGER.error("Error reading package.json", e);
             }
-        }
-        return emptyList();
+            return new ArrayList<Dependency>();
+        }).flatMap(List::stream).collect(Collectors.toList());
     }
 
-    private File getNodeModulesFolder(File file, File base) {
+    private Stream<File> getNodeModulesFolders(File file) {
         try (final Stream<Path> walk = Files.walk(file.toPath())) {
-            final Optional<Path> nodeModules = walk.filter(it -> it.endsWith("node_modules")).findAny();
-            if (nodeModules.isPresent()) {
-                LOGGER.info("Found node_modules folder at {}", nodeModules.get());
-                base = nodeModules.get().toFile().getParentFile();
-            }
+            return walk.filter(it -> it.endsWith("node_modules")).map(Path::toFile).map(File::getParentFile).collect(Collectors.toList()).stream();
         } catch (IOException e) {
             LOGGER.error("Error trying to find a node_modules folder", e);
         }
-        return base;
+        return Stream.empty();
     }
 
     private List<Dependency> dependencyParser(JsonObject jsonDependencies, List<Dependency> dependencies, File nodeModulesFolder) {

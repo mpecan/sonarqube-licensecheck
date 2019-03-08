@@ -37,7 +37,7 @@ public class JsonParserConfiguration {
 
     public static JsonParserConfiguration burrowsLicenseCheckConfiguration() {
         JsonParserConfiguration config = new JsonParserConfiguration();
-        config.fileRegex = ".*licenseReport.json";
+        config.fileRegex = ".*license.*Report.json";
         config.dependencyJsonPath = "$.[*]";
         config.artifactJsonPath = "$.dependency";
         config.licenseJsonPath = "$.licenses.[*].license";

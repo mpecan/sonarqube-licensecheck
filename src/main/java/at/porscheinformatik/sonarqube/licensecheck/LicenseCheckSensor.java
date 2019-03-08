@@ -5,6 +5,7 @@ import at.porscheinformatik.sonarqube.licensecheck.model.Dependency;
 import at.porscheinformatik.sonarqube.licensecheck.model.LicenseDefinition;
 import at.porscheinformatik.sonarqube.licensecheck.model.LicenseValidationResult;
 import at.porscheinformatik.sonarqube.licensecheck.service.LicenseMatcherService;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sonar.api.batch.fs.FileSystem;
@@ -14,6 +15,7 @@ import org.sonar.api.config.Configuration;
 import org.sonar.api.scanner.sensor.ProjectSensor;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeSet;
 
@@ -67,19 +69,25 @@ public class LicenseCheckSensor implements ProjectSensor {
     @Override
     public void execute(SensorContext context) {
         if (configuration.getBoolean(LicenseCheckPropertyKeys.ACTIVATION_KEY).orElse(false)) {
-            Set<Dependency> dependencies = new TreeSet<>();
-            LOGGER.info("Provided scanners: {}", scanners);
-            for (Scanner scanner : scanners) {
-                final List<Dependency> scan = scanner.scan(fs.baseDir());
-                if (scan != null) {
-                    dependencies.addAll(scan);
+            try {
+                Set<Dependency> dependencies = new TreeSet<>();
+                LOGGER.info("Provided scanners: {}", (Object) scanners);
+                for (Scanner scanner : scanners) {
+                    final List<Dependency> scan = scanner.scan(fs.baseDir());
+                    if (scan != null) {
+                        dependencies.addAll(scan);
+                    }
                 }
+                dependencies.removeIf(Objects::isNull);
+                dependencies.removeIf(it -> StringUtils.isBlank(it.getName()));
+                licenseMatcherService.matchLicenses(dependencies);
+                LicenseValidationResult validatedDependencies = validateLicenses.validateLicenses(dependencies, context);
+                LOGGER.debug("Validation result: {}", validatedDependencies);
+                saveDependencies(context, validatedDependencies.getDependencies());
+                saveLicenses(context, validatedDependencies.getLicenses());
+            } catch (Exception e) {
+                LOGGER.error("Exception during LicenseCheck execution: ", e);
             }
-            licenseMatcherService.matchLicenses(dependencies);
-            LicenseValidationResult validatedDependencies = validateLicenses.validateLicenses(dependencies, context);
-            LOGGER.debug("Validation result: {}", validatedDependencies);
-            saveDependencies(context, validatedDependencies.getDependencies());
-            saveLicenses(context, validatedDependencies.getLicenses());
         } else {
             LOGGER.info("Scanner is set to inactive. No scan possible.");
         }

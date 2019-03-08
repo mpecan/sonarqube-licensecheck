@@ -2,6 +2,7 @@ package at.porscheinformatik.sonarqube.licensecheck.service;
 
 import at.porscheinformatik.sonarqube.licensecheck.model.ArtifactDependencyMapping;
 import at.porscheinformatik.sonarqube.licensecheck.sonarqube.PropertiesReader;
+import org.apache.commons.lang3.StringUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sonar.api.config.Configuration;
@@ -40,6 +41,9 @@ public class ArtifactDependencyService {
     }
 
     public Optional<String> matchByPackage(String packageName) {
+        if (StringUtils.isBlank(packageName)) {
+            return Optional.empty();
+        }
         return getMavenDependencies().stream()
             .filter(artifactDependencyMapping -> packageName.matches(artifactDependencyMapping.getKey()))
             .findAny()

@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static at.porscheinformatik.sonarqube.licensecheck.LicenseCheckPropertyKeys.*;
@@ -33,17 +34,17 @@ public class LicenseMappingService {
             .map(item -> new LicenseMapping(item.get(NAME_MATCHES), item.get(LICENSE))).collect(Collectors.toList());
     }
 
-    public Map<String, String> getLicenseMap() {
-        Map<String, String> licenseMap = new HashMap<>();
+    private Map<Pattern, String> getLicenseMap() {
+        Map<Pattern, String> licenseMap = new HashMap<>();
         for (LicenseMapping license : getMavenLicenseList()) {
-            licenseMap.put(license.getRegex(), license.getLicense());
+            licenseMap.put(Pattern.compile(license.getRegex(), Pattern.CASE_INSENSITIVE), license.getLicense());
         }
         return licenseMap;
     }
 
     public Optional<String> matchLicense(String licenseName) {
         if (StringUtils.isBlank(licenseName)) {
-            return Optional.of(licenseName);
+            return Optional.ofNullable(licenseName);
         }
 
         // Use primarily the SpdxLicense list to identify licenses according to names if matching completely
@@ -59,7 +60,7 @@ public class LicenseMappingService {
 
     private Optional<String> matchFromRegex(String licenseName) {
         return getLicenseMap().entrySet().stream()
-            .filter(it -> licenseName.matches(it.getKey()))
+            .filter(it -> it.getKey().matcher(licenseName).matches())
             .map(Map.Entry::getValue).findFirst();
     }
 }

@@ -34,11 +34,8 @@ public class LicenseMatcherService {
     }
 
     public void matchLicense(Dependency dependency) {
-        if (StringUtils.isBlank(dependency.getLicense())) {
-            final String dependencyName = dependency.getName();
-            artifactDependencyService.matchByPackage(dependencyName).ifPresent(dependency::setLicense);
-            internalDependenciesService.matchByPackage(dependencyName).ifPresent(dependency::setLicense);
-        }
+        artifactDependencyService.matchByPackage(dependency.getName()).ifPresent(dependency::setLicense);
+        internalDependenciesService.matchByPackage(dependency.getName()).ifPresent(dependency::setLicense);
         if (StringUtils.isBlank(dependency.getLicense())) {
             LOGGER.info("Dependency '{}' has no license set.", dependency.getName());
             return;

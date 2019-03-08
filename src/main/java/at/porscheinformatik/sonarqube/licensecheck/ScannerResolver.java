@@ -1,7 +1,9 @@
 package at.porscheinformatik.sonarqube.licensecheck;
 
+import at.porscheinformatik.sonarqube.licensecheck.golang.WwhdParser;
 import at.porscheinformatik.sonarqube.licensecheck.gradle.GradleDependencyScanner;
 import at.porscheinformatik.sonarqube.licensecheck.interfaces.Scanner;
+import at.porscheinformatik.sonarqube.licensecheck.ios.PlistParser;
 import at.porscheinformatik.sonarqube.licensecheck.maven.MavenDependencyScanner;
 import at.porscheinformatik.sonarqube.licensecheck.npm.PackageJsonDependencyScanner;
 import at.porscheinformatik.sonarqube.licensecheck.service.JsonDependencyParser;
@@ -34,6 +36,8 @@ class ScannerResolver {
 
         scanners.add(new PackageJsonDependencyScanner());
         scanners.add(new JsonDependencyParser(configuration));
+        scanners.add(new WwhdParser());
+        scanners.add(new PlistParser());
 
         Scanner[] scannerArray = new Scanner[scanners.size()];
         return scanners.toArray(scannerArray);

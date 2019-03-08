@@ -47,16 +47,6 @@ class GradleInvoker {
 
         ProcessBuilder processBuilder = new ProcessBuilder();
         Process process = processBuilder.command(command).directory(projectRoot).start();
-        Thread timeoutThread = new Thread(() -> {
-            try {
-                Thread.sleep(3 * 60 * 1000L);
-                process.destroyForcibly();
-                LOGGER.error("Had to interrupt gradle process, as it was stuck.");
-            } catch (InterruptedException e) {
-                LOGGER.info("Gradle Timeout thread has been interrupted, gradle execution successful");
-            }
-        });
-        timeoutThread.start();
         InputStream errorStream = process.getErrorStream();
         InputStream inputStream = process.getInputStream();
         redirectOutput(errorStream, LOGGER::error);
@@ -65,7 +55,6 @@ class GradleInvoker {
         while (process.isAlive()) {
             // Waiting for gradle to finish
         }
-        timeoutThread.interrupt();
         if (process.exitValue() != 0) {
             if (LOGGER.isErrorEnabled()) {
                 LOGGER.error("Failed execution of gradle command {}", Arrays.toString(command));
@@ -106,14 +95,15 @@ class GradleInvoker {
     private String[] resolveFullGradleCommand(String[] gradleCommands) {
         String[] baseCommands;
         if (userSettings == null) {
-            baseCommands = new String[]{gradleExec, "-i"};
+            baseCommands = new String[]{gradleExec, "--no-daemon", "-i"};
         } else {
             String[] split = userSettings.split(" ");
-            baseCommands = new String[split.length + 2];
+            baseCommands = new String[split.length + 3];
             baseCommands[0] = gradleExec;
-            baseCommands[1] = "-i";
-            baseCommands[2] = split[0];
-            baseCommands[3] = split[1];
+            baseCommands[1] = "--no-daemon";
+            baseCommands[2] = "-i";
+            baseCommands[3] = split[0];
+            baseCommands[4] = split[1];
         }
         return Stream
             .of(baseCommands, gradleCommands)
