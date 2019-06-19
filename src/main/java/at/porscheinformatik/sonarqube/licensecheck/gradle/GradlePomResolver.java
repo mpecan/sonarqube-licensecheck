@@ -1,20 +1,20 @@
 package at.porscheinformatik.sonarqube.licensecheck.gradle;
 
+import at.porscheinformatik.sonarqube.licensecheck.configuration.JsonParserConfiguration;
+import at.porscheinformatik.sonarqube.licensecheck.model.Dependency;
+import at.porscheinformatik.sonarqube.licensecheck.service.JsonDependencyParser;
 import org.apache.commons.io.FileUtils;
-import org.apache.maven.model.Model;
-import org.apache.maven.model.io.xpp3.MavenXpp3Reader;
-import org.codehaus.plexus.util.xml.pull.XmlPullParserException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Collection;
 import java.util.List;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
 class GradlePomResolver {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(GradlePomResolver.class);
 
     private final File projectRoot;
 
@@ -22,41 +22,16 @@ class GradlePomResolver {
         this.projectRoot = projectRoot;
     }
 
-    List<Model> resolvePomsOfAllDependencies() throws Exception {
-        File targetDir = resolvePomsAsFiles();
-        return parsePomsInDir(targetDir);
+    List<Dependency> resolveDependencies() throws IOException, GradleInvoker.GradleInvokerException {
+        File targetDir = generateLicenseInformation();
+        return new JsonDependencyParser(JsonParserConfiguration.burrowsLicenseCheckConfiguration()).scan(targetDir);
     }
 
-    private File resolvePomsAsFiles() throws Exception {
-        String relativePoms = "build/poms";
-
+    private File generateLicenseInformation() throws IOException, GradleInvoker.GradleInvokerException {
         GradleInvoker gradleInvoker = new GradleInvoker(projectRoot.getAbsolutePath());
-        gradleInvoker.invoke("copyPoms", "-I", createInitScript());
+        gradleInvoker.invoke("licenseReport", "-I", createInitScript());
 
-        File targetDir = new File(projectRoot, relativePoms);
-        assert targetDir.exists();
-        return targetDir;
-    }
-
-    private List<Model> parsePomsInDir(File targetDir) {
-        Collection<File> pomFiles = FileUtils.listFiles(targetDir, new String[]{"pom"}, false);
-
-        return pomFiles.stream()
-            .map(File::getAbsolutePath)
-            .map(this::parsePom)
-            .filter(Objects::nonNull)
-            .collect(Collectors.toList());
-    }
-
-    private Model parsePom(String pomPath) {
-        try {
-            File file = new File(pomPath);
-            MavenXpp3Reader pomReader = new MavenXpp3Reader();
-            return pomReader.read(new FileInputStream(file));
-        } catch (IOException | XmlPullParserException e) {
-            e.printStackTrace();
-            return null;
-        }
+        return projectRoot;
     }
 
     private String createInitScript() {
@@ -67,7 +42,7 @@ class GradlePomResolver {
             FileUtils.copyInputStreamToFile(inputStream, file);
             return file.getAbsolutePath();
         } catch (IOException e) {
-            e.printStackTrace();
+            LOGGER.error("IOExceptions attempting to copy pom.gradle file.", e);
             return null;
         }
     }

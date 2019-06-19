@@ -1,15 +1,11 @@
 package at.porscheinformatik.sonarqube.licensecheck.gradle;
 
-import at.porscheinformatik.sonarqube.licensecheck.mavendependency.MavenDependency;
 import org.apache.maven.model.License;
 import org.apache.maven.model.Model;
 import org.apache.maven.model.Parent;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.regex.Pattern;
 
 public class TestDataBuilder {
 
@@ -42,13 +38,5 @@ public class TestDataBuilder {
         License license = new License();
         license.setName(name);
         return license;
-    }
-
-    public static Map<Pattern, String> licenseMap(String regex, String license) {
-        return Collections.singletonMap(Pattern.compile(regex), license);
-    }
-
-    public static List<MavenDependency> mavenDependencies(String regex, String license) {
-        return Collections.singletonList(new MavenDependency(regex, license));
     }
 }
